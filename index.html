@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 300px;
+            margin: 50px auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h2, h3 {
+            text-align: center;
+            color: #333;
+        }
+        input, textarea, select, button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #5cb85c;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #4cae4c;
+        }
+        .logout-btn {
+            background-color: #d9534f;
+        }
+        .logout-btn:hover {
+            background-color: #c9302c;
+        }
+        #alert-message {
+            color: red;
+            text-align: center;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="login-section">
+        <h2>Login to Profile</h2>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <div id="alert-message"></div>
+    </div>
+
+    <div class="container hidden" id="message-section">
+        <h3>Message System</h3>
+        <select id="receiver">
+            <option value="">Select recipient</option>
+        </select>
+        <textarea id="message" placeholder="Type your message..."></textarea>
+        <button onclick="sendMessage()">Send Message</button>
+
+        <button class="logout-btn" onclick="logout()">Log Out</button>
+        <button id="view-chatlogs-btn" class="hidden" onclick="showChatLogs()">View Chat Logs</button>
+
+        <h4>Received Messages:</h4>
+        <ul id="message-list"></ul>
+    </div>
+
+    <div class="container hidden" id="chatlog-section">
+        <h3>Chat Logs (Boss Only)</h3>
+        <ul id="chatlog-list"></ul>
+        <button onclick="showMessages()">Back</button>
+    </div>
+
+    <script>
+        const BOSSprofiles = { 
+            
+            "Tdogh": "JR239", 
+            "Boss2": "BOSS456" 
+            
+        };
+    
+        const CEOprofiles = { 
+            "AlexCEO": "CEOPASS", 
+            "CEOuser2": "CEO999" 
+            
+        };
+    
+        const Manageprofiles = { 
+            
+            "Manager1": "MANAGE123", 
+            "Manager2": "MANAGE789"
+            
+        };
+    
+        const Parentprofiles = { 
+            
+            "ParentUser": "PARENT456", 
+            "Parent2": "PARENT654" 
+            
+        };
+    
+        const Viewprofiles = { 
+            
+            "Viewer": "VIEW789", 
+            "Viewer2": "VIEW321" 
+            
+        };
+
+        const profiles = {
+            "Boss": BOSSprofiles,
+            "CEO": CEOprofiles,
+            "Manage": Manageprofiles,
+            "Parent": Parentprofiles,
+            "View": Viewprofiles
+        };
+
+        const permissions = {
+            "Boss": ["Boss", "CEO", "Manage", "Parent", "View"],
+            "CEO": ["Boss", "CEO", "Manage", "Parent", "View"],
+            "Manage": ["Parent", "View"],
+            "Parent": ["Manage"],
+            "View": ["Parent"]
+        };
+
+        let currentUser = JSON.parse(sessionStorage.getItem("currentUser")) || { username: "", type: "" };
+
+        function login() {
+            let username = document.getElementById("username").value;
+            let password = document.getElementById("password").value;
+            let profileType = "";
+
+            for (let type in profiles) {
+                if (profiles[type][username] === password) {
+                    profileType = type;
+                    currentUser = { username, type };
+                    sessionStorage.setItem("currentUser", JSON.stringify(currentUser));
+                    break;
+                }
+            }
+
+            if (profileType) {
+                document.getElementById("alert-message").innerText = "";
+                document.getElementById("login-section").classList.add("hidden");
+                document.getElementById("message-section").classList.remove("hidden");
+
+                if (profileType === "Boss") {
+                    document.getElementById("view-chatlogs-btn").classList.remove("hidden");
+                }
+
+                loadReceivers();
+                loadMessages();
+            } else {
+                document.getElementById("alert-message").innerText = "Incorrect username or password!";
+            }
+        }
+
+        function loadReceivers() {
+            let receiverSelect = document.getElementById("receiver");
+            receiverSelect.innerHTML = '<option value="">Select recipient</option>';
+
+            for (let type of permissions[currentUser.type]) {
+                for (let user in profiles[type]) {
+                    let option = document.createElement("option");
+                    option.value = user;
+                    option.innerText = user + " (" + type + ")";
+                    receiverSelect.appendChild(option);
+                }
+            }
+        }
+
+        function sendMessage() {
+            let receiver = document.getElementById("receiver").value;
+            let message = document.getElementById("message").value;
+
+            if (!receiver || !message) {
+                alert("Please select a recipient and write a message!");
+                return;
+            }
+
+            let messages = JSON.parse(localStorage.getItem("messages")) || [];
+            messages.unshift({
+                sender: currentUser.username,
+                senderType: currentUser.type,
+                receiver: receiver,
+                content: message
+            });
+
+            localStorage.setItem("messages", JSON.stringify(messages));
+
+            document.getElementById("message").value = "";
+            loadMessages();
+        }
+
+        function loadMessages() {
+            let messageList = document.getElementById("message-list");
+            messageList.innerHTML = "";
+
+            let messages = JSON.parse(localStorage.getItem("messages")) || [];
+            messages.forEach(msg => {
+                if (msg.receiver === currentUser.username) {
+                    let li = document.createElement("li");
+                    li.innerText = `From: ${msg.sender} -> ${msg.content}`;
+                    messageList.appendChild(li);
+                }
+            });
+        }
+
+        function showChatLogs() {
+            if (currentUser.type !== "Boss") return;
+
+            document.getElementById("message-section").classList.add("hidden");
+            document.getElementById("chatlog-section").classList.remove("hidden");
+
+            let chatlogList = document.getElementById("chatlog-list");
+            chatlogList.innerHTML = "";
+
+            let messages = JSON.parse(localStorage.getItem("messages")) || [];
+            messages.forEach(msg => {
+                let li = document.createElement("li");
+                li.innerText = `From: ${msg.sender} -> To: ${msg.receiver} | ${msg.content}`;
+                chatlogList.appendChild(li);
+            });
+        }
+
+        function showMessages() {
+            document.getElementById("chatlog-section").classList.add("hidden");
+            document.getElementById("message-section").classList.remove("hidden");
+        }
+
+        function logout() {
+            sessionStorage.removeItem("currentUser");
+            currentUser = { username: "", type: "" };
+            location.reload();
+        }
+    </script>
+
+</body>
+</html>
